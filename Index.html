@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1">
+
+<style>
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f3f3f3;
+}
+
+main {
+  max-width: 650px;
+  margin: auto;
+  padding: 15px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+h1 {
+  margin-top: 0;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+h3 {
+  margin-bottom: 12px;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  margin-top: 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.checkbox-row input {
+  width: auto;
+  margin: 0;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: black;
+  color: white;
+}
+
+.add-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: #333;
+  color: white;
+}
+
+.vote-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.vote-buttons button {
+  flex: 1;
+}
+
+.yes {
+  background: #8fd18f;
+}
+
+.maybe {
+  background: #ffe58a;
+}
+
+.no {
+  background: #ff9999;
+}
+
+.selected {
+  border: 3px solid black;
+  font-weight: bold;
+}
+
+.event {
+  background: white;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+.event-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.event-info {
+  margin-top: 5px;
+}
+
+.counts {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+}
+
+.success {
+  color: green;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.error {
+  color: red;
+  margin-top: 10px;
+}
+
+.empty {
+  color: #777;
+  padding: 10px 0;
+}
+
+.admin-player {
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.player-code {
+  margin-top: 5px;
+  font-size: 14px;
+  color: #555;
+}
+
+.small {
+  font-size: 13px;
+  color: #777;
+  margin-top: 3px;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 20px 0;
+}
+
+</style>
+
+
+<style>
+.player-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.player-actions button{padding:6px 10px}
+</style>
+<script>
+function refreshAdminPlayers(){ if(typeof loadAdmin==='function'){ loadAdmin(); } }
+</script>
+
+</head>
+
+
+<body>
+
+
+<main>
+
+
+<div class="card">
+
+  <h1>🎯 Dart-Team</h1>
+
+  <h2>🔑 Team-Code</h2>
+
+  <input
+    id="codeInput"
+    placeholder="Deinen Code eingeben">
+
+  <button
+    class="login-btn"
+    onclick="login()">
+
+    Einloggen
+
+  </button>
+
+  <div id="loginStatus"></div>
+
+</div>
+
+
+
+<div id="events">
+
+  <div class="card">
+
+    <h2>📅 Kommende Termine</h2>
+
+    <div class="empty">
+      Termine werden geladen …
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<div class="card">
+
+  <h2>👥 Mannschaft</h2>
+
+  <div id="players">
+
+    Spieler werden geladen …
+
+  </div>
+
+</div>
+
+
+
+<div id="adminArea"></div>
+
+
+</main>
+
+
+
+<script>
+
+
+let players = [];
+
+let events = [];
+
+let responses = [];
+
+let currentPlayer = null;
+
+
+
+// ======================================
+// LOGIN
+// ======================================
+
+function login() {
+
+  const code =
+    document
+      .getElementById('codeInput')
+      .value
+      .trim();
+
+
+  if (!code) {
+
+    document
+      .getElementById('loginStatus')
+      .innerHTML =
+      '<div class="error">' +
+      'Bitte Team-Code eingeben.' +
+      '</div>';
+
+    return;
+
+  }
+
+
+  google.script.run
+
+    .withSuccessHandler(function(result) {
+
+      if (!result.success) {
+
+        document
+          .getElementById('loginStatus')
+          .innerHTML =
+          '<div class="error">' +
+          '❌ Code nicht gefunden' +
+          '</div>';
+
+        return;
+
+      }
+
+
+      currentPlayer =
+        result.player;
+
+
+      document
+        .getElementById('loginStatus')
+        .innerHTML =
+
+        '<div class="success">' +
+
+        'Willkommen ' +
+
+        escapeHtml(
+          currentPlayer.name
+        ) +
+
+        ' 🎯' +
+
+        '</div>';
+
+
+      renderEvents();
+
+      loadAdmin();
+
+    })
+
+    .withFailureHandler(showError)
+
+    .loginWithCode(code);
+
+}
+
+
+
+// ======================================
+// SPIELER LADEN
+// ======================================
+
+function loadPlayers() {
+
+  google.script.run
+
+    .withSuccessHandler(function(data) {
+
+      players = data;
+
+      showPlayers();
+
+    })
+
+    .withFailureHandler(showError)
+
+    .getPlayers();
+
+}
+
+
+
+// ======================================
+// SPIELER ANZEIGEN
+// ======================================
+
+function showPlayers() {
+
+  const container =
+    document.getElementById('players');
+
+
+  if (!players.length) {
+
+    container.innerHTML =
+      '<div class="empty">' +
+      'Keine aktiven Spieler.' +
+      '</div>';
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+
+    players
+      .map(function(player) {
+
+        return `
+
+          <div style="
+            padding:8px 0;
+            border-bottom:1px solid #ddd;
+          ">
+
+            <strong>
+              ${escapeHtml(player.name)}
+            </strong>
+
+            ${
+              player.admin
+                ? ' 👑'
+                : ''
+            }
+
+          </div>
+
+        `;
+
+      })
+      .join('');
+
+}
+
+
+
+// ======================================
+// TERMINE LADEN
+// ======================================
+
+function loadEvents() {
+
+  google.script.run
+
+    .withSuccessHandler(function(data) {
+
+      events = data;
+
+      renderEvents();
+
+    })
+
+    .withFailureHandler(showError)
+
+    .getEvents();
+
+}
+
+
+
+// ======================================
+// ANTWORTEN LADEN
+// ======================================
+
+function loadResponses() {
+
+  google.script.run
+
+    .withSuccessHandler(function(data) {
+
+      responses = data;
+
+      renderEvents();
+
+    })
+
+    .withFailureHandler(showError)
+
+    .getResponses();
+
+}
+
+
+
+// ======================================
+// TERMINE DARSTELLEN
+// ======================================
+
+function renderEvents() {
+
+  const container =
+    document.getElementById('events');
+
+
+  if (!events.length) {
+
+    container.innerHTML = `
+
+      <div class="card">
+
+        <h2>📅 Kommende Termine</h2>
+
+        <div class="empty">
+
+          Noch keine Termine eingetragen.
+
+        </div>
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div class="card">
+
+      <h2>📅 Kommende Termine</h2>
+
+      ${
+        events
+          .map(function(event) {
+
+            return renderEvent(event);
+
+          })
+          .join('')
+      }
+
+    </div>
+
+  `;
+
+}
+
+
+
+// ======================================
+// EINEN TERMIN DARSTELLEN
+// ======================================
+
+function renderEvent(event) {
+
+  const isLeague =
+
+    String(event.type)
+      .toUpperCase() ===
+    'LIGASPIEL';
+
+
+  let title =
+
+    isLeague
+      ? '🏆 Ligaspiel'
+      : '🎯 Training';
+
+
+  if (
+    isLeague &&
+    event.opponent
+  ) {
+
+    title +=
+      ' gegen ' +
+      escapeHtml(event.opponent);
+
+  }
+
+
+  let voteHtml = '';
+
+
+  if (isLeague) {
+
+    if (currentPlayer) {
+
+      const answer =
+        getPlayerResponse(
+          event.id,
+          currentPlayer.id
+        );
+
+
+      voteHtml = `
+
+        <div style="margin-top:12px">
+
+          <strong>
+            Kannst du spielen?
+          </strong>
+
+          <div class="vote-buttons">
+
+
+            <button
+
+              class="yes ${
+                answer === 'JA'
+                  ? 'selected'
+                  : ''
+              }"
+
+              onclick="vote(
+                '${event.id}',
+                '${currentPlayer.id}',
+                'JA'
+              )">
+
+              🟢 Ja
+
+            </button>
+
+
+            <button
+
+              class="maybe ${
+                answer === 'VIELLEICHT'
+                  ? 'selected'
+                  : ''
+              }"
+
+              onclick="vote(
+                '${event.id}',
+                '${currentPlayer.id}',
+                'VIELLEICHT'
+              )">
+
+              🟡 Vielleicht
+
+            </button>
+
+
+            <button
+
+              class="no ${
+                answer === 'NEIN'
+                  ? 'selected'
+                  : ''
+              }"
+
+              onclick="vote(
+                '${event.id}',
+                '${currentPlayer.id}',
+                'NEIN'
+              )">
+
+              🔴 Nein
+
+            </button>
+
+
+          </div>
+
+
+          ${
+            answer
+              ? `
+
+                <div class="success">
+
+                  Deine Antwort:
+                  ${answer}
+
+                </div>
+
+              `
+              : ''
+          }
+
+        </div>
+
+      `;
+
+    }
+
+  }
+
+
+  return `
+
+    <div class="event">
+
+      <div class="event-title">
+
+        ${title}
+
+      </div>
+
+
+      <div class="event-info">
+
+        📅 ${escapeHtml(event.date)}
+
+      </div>
+
+
+      <div class="event-info">
+
+        🕐 ${escapeHtml(event.start)}
+
+        ${
+          event.end
+            ? ' – ' +
+              escapeHtml(event.end)
+            : ''
+        }
+
+      </div>
+
+
+      ${
+        event.homeAway
+
+          ? `
+
+            <div class="event-info">
+
+              🏠
+              ${escapeHtml(event.homeAway)}
+
+            </div>
+
+          `
+
+          : ''
+      }
+
+
+      ${
+        event.location
+
+          ? `
+
+            <div class="event-info">
+
+              📍
+              ${escapeHtml(event.location)}
+
+            </div>
+
+          `
+
+          : ''
+      }
+
+
+      ${
+        event.description
+
+          ? `
+
+            <div class="event-info">
+
+              ℹ️
+              ${escapeHtml(event.description)}
+
+            </div>
+
+          `
+
+          : ''
+      }
+
+
+      ${voteHtml}
+
+
+      ${
+        isLeague
+
+          ? `
+
+            <div class="counts">
+
+              ${buildCounts(event.id)}
+
+            </div>
+
+          `
+
+          : ''
+      }
+
+
+    </div>
+
+  `;
+
+}
+
+
+
+// ======================================
+// ABSTIMMUNG
+// ======================================
+
+function vote(
+  eventId,
+  playerId,
+  answer
+) {
+
+  google.script.run
+
+    .withSuccessHandler(function() {
+
+      const existing =
+        responses.find(function(r) {
+
+          return (
+
+            String(r.terminId) ===
+            String(eventId)
+
+            &&
+
+            String(r.spielerId) ===
+            String(playerId)
+
+          );
+
+        });
+
+
+      if (existing) {
+
+        existing.answer =
+          answer;
+
+      } else {
+
+        responses.push({
+
+          terminId:
+            String(eventId),
+
+          spielerId:
+            String(playerId),
+
+          answer:
+            answer
+
+        });
+
+      }
+
+
+      renderEvents();
+
+    })
+
+    .withFailureHandler(showError)
+
+    .saveResponse(
+      eventId,
+      playerId,
+      answer
+    );
+
+}
+
+
+
+// ======================================
+// ANTWORT EINES SPIELERS
+// ======================================
+
+function getPlayerResponse(
+  eventId,
+  playerId
+) {
+
+  const response =
+    responses.find(function(r) {
+
+      return (
+
+        String(r.terminId) ===
+        String(eventId)
+
+        &&
+
+        String(r.spielerId) ===
+        String(playerId)
+
+      );
+
+    });
+
+
+  return response
+    ? response.answer
+    : '';
+
+}
+
+
+
+// ======================================
+// ABSTIMMUNGSZÄHLER
+// ======================================
+
+function buildCounts(eventId) {
+
+  const counts = {
+
+    JA: 0,
+
+    VIELLEICHT: 0,
+
+    NEIN: 0
+
+  };
+
+
+  responses.forEach(function(response) {
+
+    if (
+
+      String(response.terminId) ===
+      String(eventId)
+
+    ) {
+
+      if (
+        counts.hasOwnProperty(
+          response.answer
+        )
+      ) {
+
+        counts[
+          response.answer
+        ]++;
+
+      }
+
+    }
+
+  });
+
+
+  return `
+
+    🟢 ${counts.JA}
+    &nbsp;&nbsp;
+
+    🟡 ${counts.VIELLEICHT}
+    &nbsp;&nbsp;
+
+    🔴 ${counts.NEIN}
+
+  `;
+
+}
+
+
+
+// ======================================
+// ADMIN LADEN
+// ======================================
+
+function loadAdmin() {
+
+  if (
+    !currentPlayer ||
+    !currentPlayer.admin
+  ) {
+
+    document
+      .getElementById('adminArea')
+      .innerHTML = '';
+
+    return;
+
+  }
+
+
+  google.script.run
+
+    .withSuccessHandler(function(data) {
+
+      showAdmin(data);
+
+    })
+
+    .withFailureHandler(showError)
+
+    .getAdminOverview();
+
+}
+
+
+
+// ======================================
+// ADMIN DASHBOARD
+// ======================================
+
+function showAdmin(data) {
+
+  const area =
+    document.getElementById(
+      'adminArea'
+    );
+
+
+  area.innerHTML = `
+
+    <div class="card">
+
+      <h2>
+        👑 Admin Dashboard
+      </h2>
+
+
+      <h3>
+        ➕ Neues Ligaspiel
+      </h3>
+
+
+      <input
+        id="newOpponent"
+        placeholder="Gegner">
+
+
+      <input
+        id="newDate"
+        type="date">
+
+
+      <input
+        id="newStart"
+        type="time">
+
+
+      <input
+        id="newEnd"
+        type="time">
+
+
+      <input
+        id="newHomeAway"
+        placeholder="Heim / Auswärts">
+
+
+      <input
+        id="newLocation"
+        placeholder="Ort">
+
+
+      <input
+        id="newDescription"
+        placeholder="Beschreibung">
+
+
+      <button
+        class="login-btn"
+        onclick="createNewEvent()">
+
+        ➕ Ligaspiel speichern
+
+      </button>
+
+
+      <hr>
+
+
+      <h3>
+        📊 Aktuelle Ligaspiele
+      </h3>
+
+
+      ${
+        data.length
+
+          ? data
+              .map(function(item) {
+
+                return renderAdminEvent(
+                  item
+                );
+
+              })
+              .join('')
+
+          : `
+
+            <div class="empty">
+
+              Keine Ligaspiele vorhanden.
+
+            </div>
+
+          `
+      }
+
+
+      <hr>
+
+
+      <h3>
+        👥 Spielerverwaltung
+      </h3>
+
+
+      <button
+        class="add-btn"
+        onclick="showAddPlayerForm()">
+
+        ➕ Spieler hinzufügen
+
+      </button>
+
+
+      <div id="addPlayerArea"></div>
+
+
+      <div id="adminPlayers">
+
+        Spieler werden geladen …
+
+      </div>
+
+
+    </div>
+
+  `;
+
+
+  loadAdminPlayers();
+
+}
+
+
+
+// ======================================
+// ADMIN LIGASPIEL ANZEIGEN
+// ======================================
+
+function renderAdminEvent(item) {
+
+  return `
+
+    <div class="event">
+
+      <div class="event-title">
+
+        🏆
+        ${escapeHtml(
+          item.event.opponent ||
+          'Ligaspiel'
+        )}
+
+      </div>
+
+
+      <div>
+
+        📅
+        ${escapeHtml(
+          item.event.date
+        )}
+
+      </div>
+
+
+      <p>
+
+        🟢 ${item.counts.yes}
+
+        &nbsp;&nbsp;
+
+        🟡 ${item.counts.maybe}
+
+        &nbsp;&nbsp;
+
+        🔴 ${item.counts.no}
+
+        &nbsp;&nbsp;
+
+        ⚪ ${item.counts.open}
+
+      </p>
+
+
+      ${
+        item.players
+          .map(function(player) {
+
+            return `
+
+              <div class="admin-player">
+
+                <span>
+
+                  ${escapeHtml(
+                    player.name
+                  )}
+
+                </span>
+
+                <strong>
+
+                  ${player.answer}
+
+                </strong>
+
+              </div>
+
+            `;
+
+          })
+          .join('')
+
+      }
+
+    </div>
+
+  `;
+
+}
+
+
+
+// ======================================
+// ADMIN SPIELER LADEN
+// ======================================
+
+function loadAdminPlayers() {
+
+  google.script.run
+
+    .withSuccessHandler(function(data) {
+
+      renderAdminPlayers(data);
+
+    })
+
+    .withFailureHandler(showError)
+
+    .getPlayers();
+
+}
+
+
+
+// ======================================
+// ADMIN SPIELER ANZEIGEN
+// ======================================
+
+function renderAdminPlayers(
+  playerList
+) {
+
+  const container =
+    document.getElementById(
+      'adminPlayers'
+    );
+
+
+  if (!container) {
+
+    return;
+
+  }
+
+
+  if (!playerList.length) {
+
+    container.innerHTML =
+      '<div class="empty">' +
+      'Keine Spieler vorhanden.' +
+      '</div>';
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+
+    playerList
+      .map(function(player) {
+
+        return `
+
+          <div
+            class="admin-player">
+
+            <div>
+
+              <strong>
+
+                ${escapeHtml(
+                  player.name
+                )}
+
+              </strong>
+
+
+              <div class="small">
+
+                ID:
+                ${escapeHtml(
+                  player.id
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div>
+
+              ${
+                player.admin
+                  ? '👑 Admin'
+                  : 'Spieler'
+              }
+
+            </div>
+
+          </div>
+
+        `;
+
+      })
+      .join('');
+
+}
+
+
+
+// ======================================
+// SPIELER HINZUFÜGEN – FORMULAR
+// ======================================
+
+function showAddPlayerForm() {
+
+  const area =
+    document.getElementById(
+      'addPlayerArea'
+    );
+
+
+  area.innerHTML = `
+
+    <div class="card">
+
+      <h3>
+        ➕ Neuen Spieler anlegen
+      </h3>
+
+
+      <input
+        id="newPlayerName"
+        placeholder="Name des Spielers">
+
+
+      <div class="checkbox-row">
+
+        <input
+          type="checkbox"
+          id="newPlayerAdmin">
+
+        <label
+          for="newPlayerAdmin">
+
+          👑 Admin-Rechte
+
+        </label>
+
+      </div>
+
+
+      <button
+        class="login-btn"
+        onclick="createNewPlayer()">
+
+        Spieler speichern
+
+      </button>
+
+
+      <button
+        style="
+          width:100%;
+          margin-top:8px;
+          background:#ddd;
+        "
+        onclick="closeAddPlayerForm()">
+
+        Abbrechen
+
+      </button>
+
+
+      <div id="newPlayerStatus"></div>
+
+    </div>
+
+  `;
+
+}
+
+
+
+// ======================================
+// SPIELER-FORMULAR SCHLIESSEN
+// ======================================
+
+function closeAddPlayerForm() {
+
+  document
+    .getElementById(
+      'addPlayerArea'
+    )
+    .innerHTML = '';
+
+}
+
+
+
+// ======================================
+// SPIELER SPEICHERN
+// ======================================
+
+function createNewPlayer() {
+
+  const name =
+    document
+      .getElementById(
+        'newPlayerName'
+      )
+      .value
+      .trim();
+
+
+  const isAdmin =
+    document
+      .getElementById(
+        'newPlayerAdmin'
+      )
+      .checked;
+
+
+  const status =
+    document
+      .getElementById(
+        'newPlayerStatus'
+      );
+
+
+  if (!name) {
+
+    status.innerHTML =
+
+      '<div class="error">' +
+
+      'Bitte einen Namen eingeben.' +
+
+      '</div>';
+
+    return;
+
+  }
+
+
+  status.innerHTML =
+
+    '<div>' +
+
+    'Spieler wird gespeichert …' +
+
+    '</div>';
+
+
+  google.script.run
+
+    .withSuccessHandler(function(result) {
+
+      status.innerHTML = `
+
+        <div class="success">
+
+          Spieler erfolgreich angelegt ✅
+
+          <br><br>
+
+          <strong>
+            ${escapeHtml(
+              result.player.name
+            )}
+          </strong>
+
+          <br>
+
+          Team-Code:
+
+          <strong>
+            ${escapeHtml(
+              result.player.code
+            )}
+          </strong>
+
+          <br><br>
+
+          ⚠️ Diesen Code bitte dem
+          Spieler mitteilen.
+
+        </div>
+
+      `;
+
+
+      loadPlayers();
+
+      loadAdminPlayers();
+
+
+      document
+        .getElementById(
+          'newPlayerName'
+        )
+        .value = '';
+
+
+      document
+        .getElementById(
+          'newPlayerAdmin'
+        )
+        .checked = false;
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      status.innerHTML =
+
+        '<div class="error">' +
+
+        escapeHtml(
+          error.message ||
+          error
+        ) +
+
+        '</div>';
+
+    })
+
+    .createPlayer(
+      name,
+      isAdmin
+    );
+
+}
+
+
+
+// ======================================
+// NEUES LIGASPIEL
+// ======================================
+
+function createNewEvent() {
+
+  const eventData = {
+
+    date:
+      document
+        .getElementById('newDate')
+        .value,
+
+    start:
+      document
+        .getElementById('newStart')
+        .value,
+
+    end:
+      document
+        .getElementById('newEnd')
+        .value,
+
+    opponent:
+      document
+        .getElementById('newOpponent')
+        .value
+        .trim(),
+
+    homeAway:
+      document
+        .getElementById('newHomeAway')
+        .value
+        .trim(),
+
+    location:
+      document
+        .getElementById('newLocation')
+        .value
+        .trim(),
+
+    description:
+      document
+        .getElementById('newDescription')
+        .value
+        .trim()
+
+  };
+
+
+  if (!eventData.opponent) {
+
+    alert(
+      'Bitte einen Gegner eingeben.'
+    );
+
+    return;
+
+  }
+
+
+  if (!eventData.date) {
+
+    alert(
+      'Bitte ein Datum auswählen.'
+    );
+
+    return;
+
+  }
+
+
+  if (!eventData.start) {
+
+    alert(
+      'Bitte eine Beginnzeit auswählen.'
+    );
+
+    return;
+
+  }
+
+
+  google.script.run
+
+    .withSuccessHandler(function() {
+
+      alert(
+        'Ligaspiel gespeichert ✅'
+      );
+
+
+      loadEvents();
+
+      loadAdmin();
+
+    })
+
+    .withFailureHandler(showError)
+
+    .createEvent(
+      eventData
+    );
+
+}
+
+
+
+// ======================================
+// FEHLER
+// ======================================
+
+function showError(error) {
+
+  console.error(error);
+
+
+  alert(
+
+    'Fehler: ' +
+
+    (
+      error &&
+      error.message
+        ? error.message
+        : error
+    )
+
+  );
+
+}
+
+
+
+// ======================================
+// HTML SICHER MACHEN
+// ======================================
+
+function escapeHtml(text) {
+
+  const div =
+    document.createElement(
+      'div'
+    );
+
+
+  div.textContent =
+    text == null
+      ? ''
+      : String(text);
+
+
+  return div.innerHTML;
+
+}
+
+
+
+// ======================================
+// START
+// ======================================
+
+loadPlayers();
+
+loadEvents();
+
+loadResponses();
+
+
+</script>
+
+</body>
+
+</html>
