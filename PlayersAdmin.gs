@@ -59,3 +59,39 @@ function generateNewPlayerCode(id) {
   }
   throw new Error('Spieler nicht gefunden.');
 }
+
+
+function addPlayer(name, active, admin){
+  name=String(name||'').trim();
+  if(!name) return {success:false,message:'Name fehlt'};
+  if(playerExists(name)) return {success:false,message:'Spieler existiert bereits'};
+  const sheet=getSpreadsheet().getSheetByName('Spieler');
+  const id=Utilities.getUuid();
+  const code=createUniquePlayerCode(sheet.getDataRange().getValues());
+  sheet.appendRow([id,name,active?'JA':'NEIN',admin?'JA':'NEIN',code]);
+  return {success:true,message:'Spieler angelegt',data:{id,name,active,admin,code}};
+}
+
+function deletePlayer(id){
+ const sheet=getSpreadsheet().getSheetByName('Spieler');
+ const row=findPlayerRow(id);
+ if(row<0) return {success:false,message:'Spieler nicht gefunden'};
+ sheet.deleteRow(row);
+ return {success:true,message:'Spieler gelöscht'};
+}
+
+function findPlayerRow(id){
+ const vals=getSpreadsheet().getSheetByName('Spieler').getDataRange().getValues();
+ for(let i=1;i<vals.length;i++) if(String(vals[i][0])===String(id)) return i+1;
+ return -1;
+}
+function playerExists(name){
+ const n=String(name).trim().toLowerCase();
+ return getAllPlayersAdmin().some(p=>p.name.toLowerCase()===n);
+}
+function createUniquePlayerCode(values){
+ let code;
+ do{code=String(Math.floor(100000+Math.random()*900000));}
+ while(values.slice(1).some(r=>String(r[4])===code));
+ return code;
+}
